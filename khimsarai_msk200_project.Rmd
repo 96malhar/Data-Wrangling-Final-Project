@@ -1,0 +1,618 @@
+---
+title: "Data_wrangling_final_project"
+author: "Khimsaria_msk200"
+date: "5/2/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, fig.width = 9, fig.height = 6)
+
+library(ggplot2)
+library(dplyr)
+library(DT)
+library(tidyr)
+library(wesanderson)
+
+videogamesales <- read.csv("data.csv")
+
+videogamesales <- videogamesales[!(videogamesales$Year %in% c("N/A", "2017", "2020")),]
+videogamesales <- videogamesales %>% gather(Region, Revenue, 7:10) 
+videogamesales$Region <- factor(videogamesales$Region)
+
+## Colors
+mycolors <- c("#771C19", "#AA3929", "#8E9CA3", "#556670", "#000000", "#E25033", "#F27314", "#F8A31B", "#E2C59F", "#B6C5CC")
+
+# Function to define the theme use across all the plots in the file.
+mytheme_1 <- function() {
+  
+ return(theme(axis.text.x = element_text(angle = 90, size = 10, vjust = 0.4), plot.title = element_text(size = 15, vjust = 2),axis.title.x = element_text(size = 12, vjust = -0.35)))
+  
+}
+
+mytheme_2 <- function() {
+  
+ return(theme(axis.text.x = element_text(size = 10, vjust = 0.4), plot.title = element_text(size = 15, vjust = 2),axis.title.x = element_text(size = 12, vjust = -0.35)))
+  
+}
+
+```
+
+## About Video Game Industry
+
+A video game is an electronic game that can be played on a computing device, such as a personal computer, gaming console or mobile phone. Depending on the platform, video games can be subcategorized into computer games and console games. In recent years however, the emergence of social networks, smartphones and tablets introduced new categories such as mobile and social games. Video games have come a long way since the first games emerged in the 1970s. Today's video games offer photorealistic graphics and simulate reality to a degree which is astonishing in many cases.
+
+## Video Game Industry - Estimated Growth Projection
+
+Market research firm Newzoo revealed today that it expects the global gaming market to be worth $99.6 billion in 2016. That's up 8.4 percent when compared to last year. It also expects 2016 to be the first year that mobile overtakes PC and console, with Newzoo expecting that market to make $36.9 billion in 2016, up 21.3 percent from 2015.
+
+Click here <http://venturebeat.com/2016/04/21/video-games-will-become-a-99-6b-industry-this-year-as-mobile-overtakes-consoles-and-pcs/>
+
+### Lets check the number of releases by year and revenue by year
+
+```{r}
+
+ggplot(videogamesales, aes(Year)) + 
+  geom_bar(fill = "blue") +
+  mytheme_1() +
+  ggtitle("Video Game Releases by Year")
+
+revenue_by_year <- videogamesales %>% 
+                    group_by(Year) %>%
+                      summarize(Revenue = sum(Global_Sales))
+
+ggplot(revenue_by_year, aes(Year, Revenue)) + 
+  geom_bar(fill = "maroon", stat = "identity") +
+  mytheme_1() +
+  ggtitle("Video Game Revenue by Year")
+
+
+```
+
+* There is huge spike in the number of releases after 2000 and it peaked during 2008 and 2009. It has started declining last few years. This surprising when demand is more revenue should have been more.
+
+### Top Publisher by Revenue each Year
+
+
+```{r}
+
+top_publisher_year <- videogamesales %>% 
+         group_by(Year, Publisher) %>% 
+         summarize(Revenue = sum(Global_Sales)) %>%
+         top_n(1)
+
+datatable(top_publisher_year)
+
+ggplot(top_publisher_year, aes(Year, Revenue, fill = Publisher)) + 
+  geom_bar(stat = "identity") +
+  ggtitle("Top Publisher by Revenue each Year") +
+  mytheme_1() +
+  theme(legend.position = "top")
+  
+```
+
+* Nintendo is by far the most dominating company in Video Game Industry
+* Nintendo and EA are dominating for more than 3 decades now.
+
+
+### Top Genre by Revenue each Year
+
+
+```{r}
+
+top_1 <- videogamesales %>% 
+         group_by(Year, Genre) %>% 
+         summarize(Revenue = sum(Global_Sales)) %>%
+         top_n(1)
+
+datatable(top_1)
+
+ggplot(top_1, aes(Year, Revenue, fill = Genre)) + 
+  geom_bar(stat = "identity") +
+  ggtitle("Top Genre by Revenue each Year") +
+  mytheme_1() +
+  theme(legend.position = "top") +
+  scale_fill_manual(values = mycolors)
+  
+```
+
+* Last 15 Years Action has been the most top revenue generating genre except for once Sports in 2006.
+
+
+### Top Games by Revenue each year
+
+```{r}
+
+top_games <- videogamesales %>%
+             group_by(Year, Name) %>%
+             summarize(Revenue = sum(Global_Sales)) %>%
+             arrange(desc(Revenue)) %>%
+             top_n(1)
+             
+datatable(top_games)
+
+
+ggplot(top_games, aes(Year, Revenue, fill = Name)) + 
+  geom_bar(stat = "identity") +
+  mytheme_1() +
+  ggtitle("Total Games by Revenue each year") +
+  theme(legend.position = "top")
+
+```
+
+* 2006 was the best year with Wii Sports generated huge revenue compared to all other years. 
+
+
+### Top Platform by Revenue each year
+
+```{r}
+
+top_platforms <- videogamesales %>%
+             group_by(Year, Platform) %>%
+             summarize(Revenue = sum(Global_Sales)) %>%
+             arrange(desc(Revenue)) %>%
+             top_n(1)
+             
+datatable(top_platforms)
+
+
+ggplot(top_platforms, aes(Year, Revenue, fill = Platform)) + 
+  geom_bar(stat = "identity") +
+  mytheme_1() +
+  ggtitle("Top Platform by Revenue each year") +
+  theme(legend.position = "top") + 
+  scale_fill_manual(values = mycolors)
+
+
+```
+
+* This is amazing, there is some real trend in the favorite platforms.
+* Once a platform clicks in the market, it goes on to rule for few years.
+* Playstation platform is the most famous in the market for nearly 20 years.
+
+
+### How many publishers are in the market and who are the top publishers by number of releases? 
+
+
+```{r}
+
+length(unique(videogamesales$Publisher))
+
+by_publishers <- videogamesales %>% group_by(Publisher) %>% summarize(Total = n()) %>% arrange(desc(Total)) %>% head(10)
+by_publishers$Percentage <- by_publishers$Total/dim(videogamesales)[1] * 100
+by_publishers$Publisher <- factor(by_publishers$Publisher)
+
+datatable(by_publishers, filter = "none")
+
+ggplot(by_publishers, aes(reorder(Publisher, Total), Total, fill = Publisher)) + 
+    geom_bar(stat = "identity") + 
+    ggtitle("Top 10 Publishers by Number of Releases") + 
+    theme(legend.position = "none") + 
+    xlab("Publisher") +
+    mytheme_2() +
+    coord_flip()
+
+```
+
+
+* There are 577 publishers
+* EA is Top publisher with Activision coming in second.
+* Top 10 publishers have published nearly 35% of all the games.
+
+
+### Who are the top publishers by Total Revenue? 
+
+
+```{r}
+
+top_publishers <- videogamesales %>% group_by(Publisher) %>% summarize(Revenue = sum(Global_Sales), Percentage = Revenue/sum(videogamesales$Global_Sales) * 100) %>% arrange(desc(Revenue)) %>% head(10)
+
+top_publishers$Publisher <- factor(top_publishers$Publisher)
+
+datatable(top_publishers)
+
+ggplot(top_publishers, aes(reorder(Publisher, Revenue), Revenue, fill = Publisher)) + 
+    geom_bar(stat = "identity") + 
+    ggtitle("Top 10 Publishers by Revenue") + 
+    theme(legend.position = "none") + 
+    xlab("Publisher") +
+    ylab("Revenue in millions") +
+    mytheme_2() +
+    coord_flip()
+
+```
+
+
+* There is change in the positions from the list by number of releases.
+* Nintendo is Top 1 with almost 21% of the overall revenue
+* EA being Top 2 with nearly half the revenue of the Nintendo.
+* Nearly staggering 70% of the overall revenue is generated by the Top 10 publishers
+
+### Lets check how top 10 publishers have grown over the years by number of releases
+
+```{r}
+
+top_publishers <- videogamesales[videogamesales$Publisher %in% by_publishers$Publisher,] %>% group_by(Publisher, Year) %>% summarize(Total= n())
+
+top_publishers$Publisher <- factor(top_publishers$Publisher)
+
+ggplot(top_publishers, aes(Year, Publisher, fill = Total)) + 
+  geom_tile(color = "white") + 
+  mytheme_1() +
+  ggtitle("Top 10 Publishers Releases by Year") +
+  xlab("Year") +
+  theme(legend.position = "top")
+
+```
+
+* EA was not even in the market before 1992
+* Activision is in the market from 1980
+* EA has highest number of releases between 2002 and 2011.
+* THQ has not released any games from 2014
+
+
+### Lets check how top 10 publishers have grown over the years in terms of revenue
+
+```{r}
+
+top_publishers <- videogamesales[videogamesales$Publisher %in% by_publishers$Publisher,] %>% 
+                  group_by(Publisher, Year) %>% 
+                  summarize(Revenue = sum(Global_Sales))
+
+top_publishers$Publisher <- factor(top_publishers$Publisher)
+
+ggplot(top_publishers, aes(Year, Publisher, fill = Revenue)) + 
+  geom_tile(color = "white") + 
+  mytheme_1() +
+  ggtitle("Top 10 Publishers by Revenue") +
+  xlab("Year") +
+  theme(legend.position = "top")
+
+```
+
+* Nintendo had great year in 2006
+* Nintendo, EA and Activision had good run in last 10-15 years in terms of revenue.
+
+
+### Genres by Number of Releases
+
+```{r}
+
+by_genres <- videogamesales %>% 
+              group_by(Genre) %>% 
+              summarize(Total = n(), Percentage = Total/dim(videogamesales)[1] * 100) %>%  
+              arrange(desc(Percentage))
+          
+datatable(by_genres)
+
+ggplot(by_genres, aes(reorder(Genre, -Percentage), Percentage, fill = Genre)) + 
+  geom_bar(stat = "identity") +
+  ggtitle("Video Games Genres by Number of Releases") +
+  ylab("Percentage") +
+  xlab("Genres") +
+  theme(legend.position = "none") + 
+  mytheme_1()
+
+```
+
+
+* Action Games contribute almost 20% of the games released.
+* Sports games coming in second.
+* Overall all top 5 genres contribute to 60% of the games released.
+
+
+### Genres by Revenue
+
+```{r}
+
+by_genres <- videogamesales %>% 
+              group_by(Genre) %>% 
+              summarize(Revenue = sum(Global_Sales), Percentage = Revenue/sum(videogamesales$Global_Sales) * 100) %>%  
+              arrange(desc(Percentage))
+
+datatable(by_genres)
+
+
+ggplot(by_genres, aes(reorder(Genre, -Revenue), Revenue, fill = Genre)) + 
+  geom_bar(stat = "identity") +
+  ggtitle("Video Games Genres by Revenue") +
+  ylab("Revenue in Millions") +
+  xlab("Genres") +
+  theme(legend.position = "none") + 
+  mytheme_1()
+
+```
+
+
+* Action Games contribute almost 20% of the revenue.
+* Sports games coming in second with 15% of the revenue.
+* Overall all top 5 genres contribute to 65% of the revenue.
+
+### Which genre generated most revenue per release?
+
+```{r}
+
+revenue_per_release <- videogamesales %>% 
+              group_by(Genre) %>% 
+              summarize(Total = n(), Revenue = sum(Global_Sales), RevenuePerRelease = Revenue/Total) %>%  
+              arrange(desc(RevenuePerRelease))
+
+datatable(revenue_per_release)
+
+ggplot(revenue_per_release, aes(reorder(Genre, -RevenuePerRelease), RevenuePerRelease, fill = Genre)) + 
+  geom_bar(stat = "identity") +
+  ggtitle("Video Games Genre Ranking based on Revenue Per Release") +
+  ylab("Revenue in Millions") +
+  xlab("Genres") +
+  theme(legend.position = "none") + 
+  mytheme_1()
+
+```
+
+* Platform is the best genre by revenue per release.
+* Shooter and Role Playing with second and third best.
+
+
+### Top 10 Games by Revenue
+
+```{r}
+
+top_games <- videogamesales %>%
+             group_by(Name) %>%
+             summarize(Revenue = sum(Global_Sales), Percentage = Revenue/sum(videogamesales$Global_Sales) * 100) %>%
+             arrange(desc(Revenue)) %>%
+             head(10)
+
+datatable(top_games)
+
+ggplot(top_games, aes(reorder(Name, Revenue), Revenue, fill = Name)) + 
+  geom_bar(stat = "identity") +
+  ggtitle("Top 10 Games by Revenue") +
+  ylab("Revenue in Millions") +
+  xlab("Games") +
+  mytheme_2() +
+  theme(legend.position = "none") +
+  coord_flip()
+
+```
+
+* Wii Sports game has 1% of the total revenue with 82.74 million
+* Grand Theft Auto V coming second with 55.92 million
+
+### Sales Revenue by regions
+
+
+```{r}
+
+by_regions <- videogamesales %>% 
+               group_by(Region) %>%
+                summarize(TotalRevenue = sum(Revenue), Percentage = TotalRevenue/sum(videogamesales$Revenue) * 100) %>%
+                 arrange(desc(TotalRevenue))
+
+datatable(by_regions)
+
+ggplot(by_regions, aes(Region, TotalRevenue, fill = Region)) + 
+  geom_bar(stat = "identity") +
+  mytheme_2() +
+  ggtitle("Total Revenue by Region") +
+  theme(legend.position = "top")
+
+```
+
+* North America market contributes 49% of the revenue.
+* Europe contributes 27% of the revenue.
+
+
+### Distribution of Sales Revenue by regions
+
+
+```{r}
+
+ggplot(videogamesales, aes(Region, Revenue, fill = Region)) + 
+  geom_boxplot() +
+  scale_y_log10() +
+  mytheme_2() +
+  ggtitle("Distribution of Sales Revenue") +
+  theme(legend.position = "top") +
+  coord_flip()
+
+```
+
+* Other_Sales region sales are completely right skewed.
+* While others are also but not as much as Other_Sales
+
+### Distribution of Sales Revenue by Year
+
+
+```{r}
+
+ggplot(videogamesales, aes(Year, Revenue)) + 
+  geom_boxplot(fill = "#AA3929") +
+  scale_y_log10() +
+  mytheme_2() +
+  ggtitle("Distribution of Sales Revenue - Year") +
+  theme(legend.position = "top") +
+  coord_flip()
+
+```
+
+### Sales Revenue by regions and year
+
+
+```{r}
+
+by_region_year <- videogamesales %>% 
+               group_by(Year, Region) %>%
+                summarize(TotalRevenue = sum(Revenue)) %>%
+                 arrange(desc(TotalRevenue))
+by_region_year$Region <- factor(by_region_year$Region)
+by_region_year$Year <- factor(by_region_year$Year)
+
+datatable(by_region_year)
+
+ggplot(by_region_year, aes(Year, TotalRevenue, color = Region)) +
+      geom_point(size = 3) +
+      mytheme_1() +
+      ggtitle("Total Revenue by Region and Year") +
+      theme(legend.position = "top")
+
+```
+
+* Huge fall in revenue in last 5-6 years
+* Major fall is in North American Region
+* Surprisingly 2008 recession seems to have some impact on the Video game sales across region specially major impact on NA region.
+
+
+### Top 3 Publishers by Revenue in each Region
+
+```{r}
+
+top_publishers_region <- videogamesales %>%
+             group_by(Region, Publisher) %>%
+             summarize(Revenue = sum(Revenue)) %>%
+             arrange(desc(Revenue)) %>%
+             top_n(3)
+
+datatable(top_publishers_region)
+
+ggplot(top_publishers_region, aes(Region, Revenue, fill = Publisher)) + 
+  geom_bar(position = "dodge", stat = "identity")  +
+  ggtitle("Top 3 Publishers by Revenue in each Region") +
+  ylab("Revenue in Millions") +
+  xlab("Region") +
+  mytheme_2() +
+  theme(legend.position = "top")
+
+```
+
+* Nintendo being a Japanese company completely dominates the Japan market.
+* Nintendo has tough competition in the European market.
+
+
+### Top 3 Games by Revenue in each Region
+
+```{r}
+
+top_games_region <- videogamesales %>%
+             group_by(Region, Name) %>%
+             summarize(Revenue = sum(Revenue)) %>%
+             arrange(desc(Revenue)) %>%
+             top_n(3)
+
+datatable(top_games_region)
+
+ggplot(top_games_region, aes(Region, Revenue, fill = Name)) + 
+  geom_bar(position = "dodge", stat = "identity")  +
+  ggtitle("Top 3 Games by Revenue in each Region") +
+  ylab("Revenue in Millions") +
+  xlab("Region") +
+  mytheme_2() +
+  theme(legend.position = "top")
+
+```
+
+
+### Top 3 Genres by Revenue in each Region
+
+```{r}
+
+top_genres_region <- videogamesales %>%
+             group_by(Region, Genre) %>%
+             summarize(Revenue = sum(Revenue)) %>%
+             arrange(desc(Revenue)) %>%
+             top_n(3)
+
+datatable(top_genres_region)
+
+ggplot(top_genres_region, aes(Region, Revenue, fill = Genre)) + 
+  geom_bar(position = "dodge", stat = "identity")  +
+  ggtitle("Top 3 Genres by Revenue in each Region") +
+  ylab("Revenue in Millions") +
+  xlab("Region") +
+  mytheme_2() +
+  theme(legend.position = "top") 
+
+```
+
+
+
+### Top 3 Years by Revenue in each Region
+
+```{r}
+
+top_year_region <- videogamesales %>%
+             group_by(Region, Year) %>%
+             summarize(Revenue = sum(Revenue)) %>%
+             arrange(desc(Revenue)) %>%
+             top_n(3)
+
+datatable(top_year_region)
+
+ggplot(top_year_region, aes(Region, Revenue, fill = Year)) + 
+  geom_bar(position = "dodge", stat = "identity")  +
+  ggtitle("Top 3 Years by Revenue in each Region") +
+  ylab("Revenue in Millions") +
+  xlab("Region") +
+  mytheme_2() +
+  theme(legend.position = "top") + 
+  scale_fill_manual(values = mycolors)
+
+```
+
+* Last 5-6 years have not been big ones for the publishers in all the regions.
+
+### Top 3 Platforms by Revenue in each Region
+
+```{r}
+
+top_platform_region <- videogamesales %>%
+             group_by(Region, Platform) %>%
+             summarize(Revenue = sum(Revenue)) %>%
+             arrange(desc(Revenue)) %>%
+             top_n(3)
+
+datatable(top_platform_region)
+
+ggplot(top_platform_region, aes(Region, Revenue, fill = Platform)) + 
+  geom_bar(position = "dodge", stat = "identity")  +
+  ggtitle("Top 3 Platform by Revenue in each Region") +
+  ylab("Revenue in Millions") +
+  xlab("Region") +
+  mytheme_2() +
+  theme(legend.position = "top") + 
+  scale_fill_manual(values = mycolors)
+
+```
+
+* No two regions are alike when it comes to top 3 platforms.
+
+
+
+### Heat Maps 
+
+
+```{r}
+
+year_genre <- videogamesales %>% 
+                group_by(Year, Genre) %>% 
+                  summarise(TotalRevenue = sum(Revenue)) 
+
+ggplot(year_genre, aes(Genre, Year, fill = TotalRevenue)) +
+    geom_tile(color = "white") +
+    ggtitle("Total Revenue by Year and Genre") + 
+    mytheme_1()
+
+```
+
+## Key Take aways from the Analysis:
+
+* Over the last few years there is decrease in the games which have crossed 100K copies sales.
+* In fact last 5-6 years has seen decrease in the revenue.
+* Nintendo is the top most publisher by revenue.
+* Action is the top most genre by revenue.
+* Action is ruling the market from 2001
+* Play Station is the most popular platform
+* EA is the top most publisher by number of releases.
+* Platform Genre generated most revenue per release.
+* Wii Sports is the top most game by revenue.
+* North America and Europe contribute 75% of the market share by revenue.
